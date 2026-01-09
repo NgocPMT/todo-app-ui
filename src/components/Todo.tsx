@@ -74,6 +74,7 @@ const Todo = ({
   const handleUpdate = (id: number) => {
     onUpdate(id);
     setShowUpdateDialog(false);
+    onResetUpdateField();
   };
 
   const handleDelete = (id: number) => {
