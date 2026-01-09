@@ -8,14 +8,26 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "./components/ui/empty";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import type { Dayjs } from "dayjs";
 import dayjs from "dayjs";
 
+interface TodoDto {
+  id: number;
+  text: string;
+  dueAt: string;
+  isDone: boolean;
+  isShow: boolean;
+}
+
+interface CreateTodoDto {
+  text: string;
+  dueAt: string;
+}
 interface Todo {
   id: number;
   text: string;
-  datetime: Dayjs | null;
+  dueAt: Dayjs | null;
   isDone: boolean;
   isShow: boolean;
 }
@@ -23,7 +35,36 @@ interface Todo {
 function App() {
   const [todos, setTodos] = useState<Todo[]>([]);
   const [createText, setCreateText] = useState("");
-  const [createDateTime, setCreateDateTime] = useState<Dayjs | null>(null);
+  const [createDueAt, setCreateDueAt] = useState<Dayjs | null>(null);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const signal = controller.signal;
+
+    const fetchTodos = async () => {
+      try {
+        const res: Response = await fetch(
+          `${import.meta.env.VITE_API_URL}/todos`,
+          {
+            signal,
+          }
+        );
+        const data = await res.json();
+        const newTodos = data.result.map((todo: TodoDto) => {
+          return { ...todo, dueAt: dayjs(todo.dueAt) } satisfies Todo;
+        });
+        setTodos(newTodos);
+      } catch (error: unknown) {
+        if (error instanceof Error && error.name !== "AbortError") {
+          console.log(error.message);
+        }
+      }
+    };
+
+    fetchTodos();
+
+    return () => controller.abort();
+  }, []);
 
   const handleCreateTextChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setCreateText(e.currentTarget.value);
@@ -33,16 +74,19 @@ function App() {
     setCreateText("");
   };
 
-  const handleCreateTodo = () => {
+  const handleCreateTodo = async () => {
+    if (!createDueAt) return;
     if (createText.length === 0) return;
-    const newIndex = todos.length;
-    const newTodo: Todo = {
-      id: newIndex,
-      text: createText,
-      datetime: createDateTime,
-      isDone: false,
-      isShow: true,
-    };
+
+    const res: Response = await fetch(`${import.meta.env.VITE_API_URL}/todos`, {
+      method: "POST",
+      body: JSON.stringify({
+        text: createText,
+        dueAt: createDueAt.toISOString(),
+      } satisfies CreateTodoDto),
+    });
+    const data: TodoDto = await res.json();
+    const newTodo: Todo = { ...data, dueAt: dayjs(data.dueAt) };
     setTodos((prevTodos) => [...prevTodos, newTodo]);
     handleResetCreateTodoFields();
   };
@@ -63,8 +107,8 @@ function App() {
               <CreateTodoDialog
                 text={createText}
                 onTextChange={handleCreateTextChange}
-                datetime={createDateTime}
-                onDatetimeChange={setCreateDateTime}
+                dueAt={createDueAt}
+                onDatetimeChange={setCreateDueAt}
                 onCancel={handleResetCreateTodoFields}
                 onCreate={handleCreateTodo}
               />
@@ -72,14 +116,13 @@ function App() {
             <div className="flex flex-col gap-4 sm:flex sm:flex-row sm:flex-wrap">
               {todos.map((todo) => (
                 <div
-                  key={`${todo.text}-${todo.datetime}`}
+                  key={`${todo.text}-${todo.dueAt}`}
                   className="ring ring-gray-300 rounded-2 min-w-56 sm:max-w-1/2 min-h-10 flex-1 rounded-lg py-2 px-3 flex flex-col justify-between gap-3"
                 >
                   <h5 className="text-lg flex-1">{todo.text}</h5>
-                  {todo.datetime && (
+                  {todo.dueAt && (
                     <p className="text-stone-600">
-                      Due:{" "}
-                      {dayjs(todo.datetime).format("hh:mm - DD MMMM, YYYY")}
+                      Due: {dayjs(todo.dueAt).format("hh:mm - DD MMMM, YYYY")}
                     </p>
                   )}
                 </div>
@@ -103,8 +146,8 @@ function App() {
               <CreateTodoDialog
                 text={createText}
                 onTextChange={handleCreateTextChange}
-                datetime={createDateTime}
-                onDatetimeChange={setCreateDateTime}
+                dueAt={createDueAt}
+                onDatetimeChange={setCreateDueAt}
                 onCancel={handleResetCreateTodoFields}
                 onCreate={handleCreateTodo}
               />

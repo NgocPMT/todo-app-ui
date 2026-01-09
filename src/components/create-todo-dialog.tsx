@@ -17,7 +17,7 @@ import type { Dayjs } from "dayjs";
 
 interface CreateTodoDialogProps {
   text: string;
-  datetime: Dayjs | null;
+  dueAt: Dayjs | null;
   onTextChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onDatetimeChange: React.Dispatch<React.SetStateAction<Dayjs | null>>;
   onCreate: () => void;
@@ -27,7 +27,7 @@ interface CreateTodoDialogProps {
 
 const CreateTodoDialog = ({
   text,
-  datetime,
+  dueAt,
   onTextChange,
   onDatetimeChange,
   onCreate,
@@ -60,7 +60,7 @@ const CreateTodoDialog = ({
             </div>
             <DateTimePicker
               label="Date & time"
-              value={datetime}
+              value={dueAt}
               onChange={(value) => onDatetimeChange(value)}
               slotProps={{
                 popper: {
